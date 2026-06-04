@@ -280,9 +280,14 @@ class ReminderWindow(QWidget):
         self._cyc_inp.setText(str(cfg.get("cycles_before_long", 4)))
 
     def _apply_pomo_preset(self, cfg):
+        # 单击预设即填入时长并直接进入专注(与快捷倒计时预设一致;自定义才需另点「专注」)
         f, sh, lo, cy = cfg
         self._foc_inp.setText(str(f)); self._sht_inp.setText(str(sh))
         self._lng_inp.setText(str(lo)); self._cyc_inp.setText(str(cy))
+        self.start_pomodoro.emit({
+            "focus_min": f, "short_break_min": sh,
+            "long_break_min": lo, "cycles_before_long": cy,
+        })
 
     # ── 触发 ──
     def _start_custom(self):

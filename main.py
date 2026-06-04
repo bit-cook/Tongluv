@@ -430,16 +430,14 @@ class PetWindow(QWidget):
         self.panel    = StatusPanel(game_systems=self.game, chat_service=self.chat_svc)
 
         # ── 提醒·番茄钟模块(P1:快捷倒计时)──
-        self.countdown        = Countdown()
-        self._countdown_active = False
-        self._countdown_paused = False
-        self.countdown_float  = CountdownFloat()
+        self.countdowns       = []   # 多条并存的快捷倒计时:每项 {"cd","float","paused"}
         self.reminder_bubbles = ReminderBubbleManager()
         self.reminder_window  = ReminderWindow()
         self.reminder_window.start_countdown.connect(self._on_start_countdown)
         self.reminder_window.toggle_pause.connect(self._on_toggle_pause)
         self.reminder_window.reset_timer.connect(self._on_reset_countdown)
         self.pomodoro         = PomodoroTimer()
+        self.pomodoro_float   = CountdownFloat()   # 番茄钟独立浮窗:可与快捷倒计时并行显示
         self.reminder_window.start_pomodoro.connect(self._on_start_pomodoro)
         self.reminder_window.toggle_pomodoro_pause.connect(self._on_toggle_pomodoro_pause)
         self.reminder_window.reset_pomodoro.connect(self._on_reset_pomodoro)
@@ -610,7 +608,8 @@ class PetWindow(QWidget):
         if not self._dragging and not self.state.is_sleeping and not self._is_snapped:
             self._click_anim_timer = 0.35
             if random.random() < 0.18:
-                self._say(_pick("clicking"), trigger_anim=False)
+                txt = self._focus_quip() if self._pomodoro_focusing() else _pick("clicking")
+                self._say(txt, trigger_anim=False)
 
     def _on_mouse_global_release(self, btn: str):
         self.input_state.on_mouse_release(btn)
@@ -641,9 +640,11 @@ class PetWindow(QWidget):
         # 偶尔说话
         spd = self.input_state.typing_speed
         if spd > 10 and random.random() < 0.08:
-            self._say(_pick("typing_intense"), mood="happy", trigger_anim=False)
+            txt = self._focus_quip() if self._pomodoro_focusing() else _pick("typing_intense")
+            self._say(txt, mood="happy", trigger_anim=False)
         elif spd > 5 and random.random() < 0.04:
-            self._say(_pick("typing"), mood="normal", trigger_anim=False)
+            txt = self._focus_quip() if self._pomodoro_focusing() else _pick("typing")
+            self._say(txt, mood="normal", trigger_anim=False)
 
     def _on_input_idle(self):
         if (self.state.is_sleeping or self._dragging or self._is_snapped
@@ -681,7 +682,8 @@ class PetWindow(QWidget):
                 bool(getattr(self.renderer, '_pending', []))
             ))
         )
-        animator_blocked = renderer_busy or self._dragging or self._is_snapped
+        animator_blocked = (renderer_busy or self._dragging or self._is_snapped
+                            or self._pomodoro_focusing())   # 专注时停掉自动动作调度,保持埋头
         if not animator_blocked:
             self.animator.update(dt, self.state)
 
@@ -1585,71 +1587,100 @@ class PetWindow(QWidget):
             category = _time_slot()
         self._say(_pick(category), mood=_mood_to_str(self.state.current_mood))
 
-    # ── 提醒·番茄钟(P1)────────────────────────────────────────────────
+    # ── 提醒·番茄钟(P1:快捷倒计时,多条并存)──────────────────────────
     def _on_start_countdown(self, seconds: float, label: str):
-        """独立窗口请求开始一个快捷倒计时(前台计时器,替换式)。"""
-        if self.pomodoro.active:            # 前台互斥:停掉番茄钟
-            self.pomodoro.reset()
-            self.reminder_window.set_pomodoro_state(False, False)
-            self.reminder_window.set_pomodoro_status("未开始")
-        self.countdown.start(seconds, label)
-        self._countdown_active = True
-        self._countdown_paused = False
-        self.reminder_window.set_timer_state(True, False)
+        """独立窗口「开始」:新增一条倒计时(不覆盖已有;与番茄钟可并行)。
+        每条带一个可点击的头顶气泡,可单独暂停/移除。"""
+        cd = Countdown()
+        cd.start(seconds, label)
+        fl = CountdownFloat(interactive=True)
+        item = {"cd": cd, "float": fl, "paused": False}
+        fl.toggle_clicked.connect(lambda it=item: self._toggle_one_countdown(it))
+        fl.reset_clicked.connect(lambda it=item: self._remove_one_countdown(it))
+        self.countdowns.append(item)
+        self._sync_timer_buttons()
+
+    def _toggle_one_countdown(self, item: dict):
+        """点气泡 ⏸/▶:暂停或继续这一条。"""
+        if item not in self.countdowns:
+            return
+        if item["paused"]:
+            item["cd"].resume(); item["paused"] = False
+        else:
+            item["cd"].pause();  item["paused"] = True
+        item["float"].set_paused(item["paused"])
+        self._sync_timer_buttons()
+
+    def _remove_one_countdown(self, item: dict):
+        """点气泡 ✕:停止并移除这一条。"""
+        if item not in self.countdowns:
+            return
+        item["cd"].stop()
+        item["float"].set_text("")
+        item["float"].deleteLater()
+        self.countdowns.remove(item)
+        self._sync_timer_buttons()
+
+    def _sync_timer_buttons(self):
+        """同步窗口左下「暂停/重置」按钮:有任意进行中即 active,全部暂停才算已暂停。"""
+        active = bool(self.countdowns)
+        paused = active and all(it["paused"] for it in self.countdowns)
+        self.reminder_window.set_timer_state(active, paused)
 
     def _on_toggle_pause(self):
-        if not self._countdown_active:
+        """窗口「暂停/继续」按钮:一键管全部 —— 有在跑的则全部暂停,否则全部继续。"""
+        if not self.countdowns:
             return
-        if self._countdown_paused:
-            self.countdown.resume()
-            self._countdown_paused = False
-        else:
-            self.countdown.pause()
-            self._countdown_paused = True
-        self.reminder_window.set_timer_state(True, self._countdown_paused)
+        any_running = any(not it["paused"] for it in self.countdowns)
+        for it in self.countdowns:
+            if any_running:
+                it["cd"].pause()
+            else:
+                it["cd"].resume()
+            it["paused"] = any_running
+            it["float"].set_paused(any_running)
+        self._sync_timer_buttons()
 
     def _on_reset_countdown(self):
-        self.countdown.stop()
-        self._countdown_active = False
-        self._countdown_paused = False
-        self.countdown_float.set_text("")
+        """窗口「重置」按钮:清空全部进行中的倒计时。"""
+        for it in self.countdowns:
+            it["cd"].stop()
+            it["float"].set_text("")
+            it["float"].deleteLater()
+        self.countdowns.clear()
         self.reminder_window.set_timer_state(False, False)
 
-    def _tick_countdown(self):
-        """每帧:更新浮窗;暂停时冻结显示;到点弹持久气泡并停。"""
-        if not self._countdown_active:
-            self.countdown_float.set_text("")
-            return
-        label = self.countdown.label
-        if self._countdown_paused:
-            rem = format_remaining(self.countdown.remaining)
-            self.countdown_float.set_text(f"⏸ {label} {rem}" if label else f"⏸ {rem}")
-            return
-        if self.countdown.is_done:
-            self._countdown_active = False
-            self.countdown.stop()
-            self.countdown_float.set_text("")
-            text = f"{label} 时间到" if label else "时间到!"
-            self.reminder_bubbles.show_bubble(text)
-            self.reminder_window.set_timer_state(False, False)
-            return
-        rem = format_remaining(self.countdown.remaining)
-        self.countdown_float.set_text(f"⏰ {label} {rem}" if label else f"⏰ {rem}")
+    def _tick_countdowns(self):
+        """每帧:逐条更新气泡;暂停冻结显示;到点弹持久气泡并移除该条。"""
+        for it in list(self.countdowns):
+            cd, fl = it["cd"], it["float"]
+            label = cd.label
+            if it["paused"]:
+                rem = format_remaining(cd.remaining)
+                fl.set_text(f"⏸ {label} {rem}" if label else f"⏸ {rem}")
+                continue
+            if cd.is_done:
+                cd.stop()
+                text = f"{label} 时间到" if label else "时间到!"
+                self.reminder_bubbles.show_bubble(text)
+                fl.set_text("")
+                fl.deleteLater()
+                self.countdowns.remove(it)
+                self._sync_timer_buttons()
+                continue
+            rem = format_remaining(cd.remaining)
+            fl.set_text(f"⏰ {label} {rem}" if label else f"⏰ {rem}")
 
     def _tick_foreground(self, dt: float):
-        """前台计时器(番茄钟 或 快捷倒计时,二选一)驱动头顶浮窗。"""
+        """番茄钟与快捷倒计时各驱动一条头顶浮窗,可并行显示。"""
         if self.pomodoro.active:
             self._tick_pomodoro(dt)
         else:
-            self._tick_countdown()
+            self.pomodoro_float.set_text("")
+        self._tick_countdowns()
 
     # ── 番茄钟(P2)─────────────────────────────────────────────────────
     def _on_start_pomodoro(self, cfg: dict):
-        if self._countdown_active:          # 前台互斥:停掉快捷倒计时
-            self._countdown_active = False
-            self._countdown_paused = False
-            self.countdown.stop()
-            self.reminder_window.set_timer_state(False, False)
         self.pomodoro.cfg.update(cfg)
         pomodoro_store.save_pomodoro_config(self.pomodoro.cfg)
         self.pomodoro.start()
@@ -1666,18 +1697,28 @@ class PetWindow(QWidget):
             self.pomodoro.resume()
         else:
             self.pomodoro.pause()
+            self._release_study_pose()   # 暂停即抬头,回鼠标跟随默认态
         self.reminder_window.set_pomodoro_state(True, self.pomodoro.paused)
 
     def _on_reset_pomodoro(self):
         self.pomodoro.reset()
-        self.countdown_float.set_text("")
+        self.pomodoro_float.set_text("")
         self.reminder_window.set_pomodoro_state(False, False)
         self.reminder_window.set_pomodoro_status("未开始")
+        self._release_study_pose()
 
     def _pomodoro_focusing(self) -> bool:
         """番茄钟正处于专注阶段(未暂停)——此时抑制自动走动/说话/睡觉,保持学习姿势。"""
         return (self.pomodoro.active and not self.pomodoro.paused
                 and self.pomodoro.phase == FOCUS)
+
+    def _release_study_pose(self):
+        """番茄钟暂停/重置时:若桌宠正埋头(study 播放中或定格),立即切回 idle 鼠标跟随。
+        休息阶段或本就没埋头时不动作,避免误打断其它动画。"""
+        r = self.renderer
+        if getattr(r, "_frozen_stay", False) or getattr(r, "_action", "") == "study":
+            r.switch_loop("idle")
+            self.state.current_action = PetAction.IDLE
 
     def _setup_focus_encourage(self):
         """每段专注随机安排 1~2 次鼓励气泡,并定下首次出现的时机。"""
@@ -1685,10 +1726,17 @@ class PetWindow(QWidget):
         focus_sec = max(30, self.pomodoro.cfg.get("focus_min", 25) * 60)
         self._focus_encourage_timer = random.uniform(focus_sec * 0.2, focus_sec * 0.5)
 
+    def _focus_quip(self) -> str:
+        """专注时的随机说话内容:多为鼓励,偶尔播报距离休息还有多久。"""
+        rem = self.pomodoro.remaining
+        if rem > 90 and random.random() < 0.45:
+            mins = int(rem // 60) + 1
+            return f"再坚持 {mins} 分钟就能休息啦,加油~⏳"
+        return random.choice(_FOCUS_ENCOURAGE)
+
     def _tick_pomodoro(self, dt: float):
         if self.pomodoro.paused:
-            rem = format_remaining(self.pomodoro.remaining)
-            self.countdown_float.set_text(f"⏸ {self.pomodoro.label} {rem}")
+            self.pomodoro_float.set_text("")    # 暂停时隐藏浮窗,点「继续」后再显示
             self.reminder_window.set_pomodoro_status(f"已暂停 · {self.pomodoro.label}")
             return
         new_phase = self.pomodoro.update()
@@ -1705,12 +1753,12 @@ class PetWindow(QWidget):
                 self._focus_encourage_timer -= dt
                 if self._focus_encourage_timer <= 0:
                     self._focus_encourage_left -= 1
-                    self._say(random.choice(_FOCUS_ENCOURAGE), mood="happy", trigger_anim=False)
+                    self._say(self._focus_quip(), mood="happy", trigger_anim=False)
                     if self._focus_encourage_left > 0:
                         focus_sec = max(30, self.pomodoro.cfg.get("focus_min", 25) * 60)
                         self._focus_encourage_timer = random.uniform(focus_sec * 0.15, focus_sec * 0.35)
         rem = format_remaining(self.pomodoro.remaining)
-        self.countdown_float.set_text(f"🍅 {self.pomodoro.label} {rem}")
+        self.pomodoro_float.set_text(f"🍅 {self.pomodoro.label} {rem}")
         self.reminder_window.set_pomodoro_status(
             f"{self.pomodoro.label} · 已完成 {self.pomodoro.completed_focus} 轮专注")
 
@@ -1728,11 +1776,14 @@ class PetWindow(QWidget):
 
     def _restack_above_pet(self):
         """桌宠头顶浮动元素竖直堆叠,避免重叠。
-        顺序(贴近头顶→往上):倒计时浮窗 → 聊天气泡 → 到点气泡。
-        头顶放不下则改到桌宠下方。"""
+        顺序(贴近头顶→往上):倒计时浮窗 → 番茄钟浮窗 → 聊天气泡 → 到点气泡。
+        始终在头顶向上堆叠(日常同时 5 个以内足够,不回退到桌宠下方)。"""
         widgets = []
-        if self.countdown_float.isVisible():
-            widgets.append(self.countdown_float)
+        for it in self.countdowns:
+            if it["float"].isVisible():
+                widgets.append(it["float"])
+        if self.pomodoro_float.isVisible():
+            widgets.append(self.pomodoro_float)
         if self.bubble.isVisible():
             widgets.append(self.bubble)
         widgets.extend(self.reminder_bubbles.active_bubbles())
@@ -1740,18 +1791,10 @@ class PetWindow(QWidget):
             return
         cx = int(self._pet_x + PET_SIZE / 2)
         gap = 6
-        total_h = sum(w.height() for w in widgets) + gap * (len(widgets) - 1)
-        pet_top = int(self._pet_y)
-        if pet_top + 8 - total_h >= 0:
-            y = pet_top + 8                       # 最低元素底边,略压头顶
-            for w in widgets:
-                w.move(int(cx - w.width() / 2), int(y - w.height()))
-                y = y - w.height() - gap
-        else:
-            y = pet_top + PET_SIZE - 8            # 头顶放不下:挪到桌宠下方
-            for w in widgets:
-                w.move(int(cx - w.width() / 2), int(y))
-                y = y + w.height() + gap
+        y = int(self._pet_y) + 8                   # 最低元素底边,略压头顶;一路向上堆叠
+        for w in widgets:
+            w.move(int(cx - w.width() / 2), int(y - w.height()))
+            y = y - w.height() - gap
 
     def _show_reminder_window(self):
         self.reminder_window.show()
@@ -1801,8 +1844,9 @@ class PetWindow(QWidget):
         识别气泡文字关键词，触发对应一次性动画。
         仅在安静 idle（鼠标跟随）状态下触发，打字动画进行中不触发。
         """
-        # 睡觉/吸附/拖拽时不打断
-        if self.state.is_sleeping or self._is_snapped or self._dragging:
+        # 睡觉/吸附/拖拽 / 番茄钟专注 时不打断
+        if (self.state.is_sleeping or self._is_snapped or self._dragging
+                or self._pomodoro_focusing()):
             return
         # 道具动画期间不触发关键词动画
         if self._item_playing:
