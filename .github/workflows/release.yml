@@ -91,25 +91,23 @@ jobs:
             Write-Host "No existing release found, skipping asset cleanup"
           }
 
-      - name: Extract tag annotation
+      - name: Load release notes
         id: tag_msg
         run: |
           $tag = "${{ env.VERSION }}"
-          # 尝试读取注释标签的消息（跳过第一行标题，取正文部分）
-          $msg = git tag -l --format='%(contents:body)' $tag 2>$null
-          if (-not $msg -or $msg.Trim() -eq '') {
-            # 回退：读取完整消息
-            $msg = git tag -l --format='%(contents)' $tag 2>$null
-          }
-          if (-not $msg -or $msg.Trim() -eq '') {
+          # Release 说明改从版本化文件读取（UTF-8），彻底避开 tag 注释在 Windows runner 上的编码坑
+          $notesFile = "docs/releases/$tag.md"
+          if (Test-Path $notesFile) {
+            $msg = (Get-Content $notesFile -Raw -Encoding UTF8).Trim()
+          } else {
+            Write-Host "::warning::$notesFile 不存在，回退为占位说明"
             $msg = "Release $tag"
           }
-          # 写入多行输出到 GITHUB_OUTPUT
-          $msg = $msg.Trim()
-          "BODY<<EOF" | Out-File -Append $env:GITHUB_OUTPUT
-          $msg | Out-File -Append $env:GITHUB_OUTPUT
-          "EOF" | Out-File -Append $env:GITHUB_OUTPUT
-          Write-Host "Release body extracted ($($msg.Length) chars)"
+          # 写入多行输出到 GITHUB_OUTPUT（显式 UTF-8，保证中文正文不被破坏）
+          "BODY<<EOF" | Out-File -Append $env:GITHUB_OUTPUT -Encoding utf8
+          $msg | Out-File -Append $env:GITHUB_OUTPUT -Encoding utf8
+          "EOF" | Out-File -Append $env:GITHUB_OUTPUT -Encoding utf8
+          Write-Host "Release notes loaded from $notesFile ($($msg.Length) chars)"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
