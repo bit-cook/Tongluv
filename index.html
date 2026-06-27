@@ -9,7 +9,7 @@
   <meta property="og:title" content="蓝色小嗵 XIAOTONG">
   <meta property="og:description" content="TA 从森林里来，因为想天天见到你。A spirit from the forest, here to stay by your side.">
   <meta property="og:image" content="icons/icon.png">
-  <meta property="og:url" content="https://weidaozhong.github.io/Tongluv/">
+  <meta property="og:url" content="https://tongluv.pages.dev/">
   <link rel="icon" href="icons/icon.png">
   <link rel="preload" href="icons/icon.png" as="image">
   <link rel="preconnect" href="https://fonts.loli.net">
@@ -629,7 +629,118 @@ body:not(.loaded){position:fixed!important;inset:0!important;overflow:hidden!imp
   overflow:hidden;
 }
 
-.hc{position:relative;z-index:5;will-change:transform}
+/* ── Cursor Stars ──────────────────────── */
+@keyframes floatOrb {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-6px); }
+}
+.cursor-stars {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 10;
+}
+.c-star {
+  position: absolute; pointer-events: auto;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 2px solid var(--star-glow, rgba(255, 255, 255, 0.5));
+  box-shadow: 0 4px 16px var(--star-glow, rgba(255, 255, 255, 0.4)), inset 0 0 8px rgba(255,255,255,0.5);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  animation: floatOrb 3s ease-in-out infinite alternate;
+}
+.c-star:nth-child(2) { animation-delay: -1.5s; }
+.c-star:hover {
+  transform: translateY(-4px) scale(1.15) !important;
+  box-shadow: 0 8px 24px var(--star-glow, rgba(255, 255, 255, 0.8));
+  background: rgba(255, 255, 255, 0.9);
+}
+.c-star.active {
+  border: 2px solid var(--star-glow, rgba(255,255,255,0.8));
+  box-shadow: 0 0 24px var(--star-glow, rgba(255,255,255,0.9)), inset 0 0 12px rgba(255,255,255,0.8);
+  background: rgba(255,255,255,1);
+}
+.c-star img {
+  width: 28px; height: 28px; object-fit: contain; pointer-events: none;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.1));
+}
+
+@media (max-width: 860px) {
+  .cursor-stars {
+    position: relative; top: auto; left: auto; width: auto; height: auto;
+    display: flex; gap: 20px; justify-content: center;
+    margin-top: 40px; margin-bottom: -10px;
+    pointer-events: auto;
+  }
+  .c-star {
+    position: relative !important;
+    top: auto !important; bottom: auto !important;
+    left: auto !important; right: auto !important;
+  }
+  .cursor-showcase {
+    margin-top: 24px !important;
+  }
+}
+
+/* ── Cursor Showcase ─────────────────────── */
+.cursor-showcase{
+  margin-top:100px;
+  background:rgba(255,255,255,.6);
+  border-radius:24px;
+  padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:24px;
+  border:1px solid rgba(0,0,0,.04);
+  box-shadow:0 12px 36px rgba(0,0,0,.04);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  width:100%;max-width:960px;
+}
+.cs-preview{
+  width:72px;height:72px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  border-right:1px solid rgba(0,0,0,.06);padding-right:24px;
+}
+.cs-preview img{
+  width:100%;height:100%;object-fit:contain;
+  filter:drop-shadow(0 4px 12px rgba(0,0,0,.15));
+  transition:transform .2s;
+}
+.cs-left{flex:1;overflow:visible;}
+.cs-icons{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:6px 0;}
+.cs-icon{
+  width:32px;height:32px;object-fit:contain;cursor:pointer;
+  flex-shrink:0;min-width:32px;min-height:32px;
+  transition:transform .2s cubic-bezier(.23,1,.32,1), filter .2s;
+  position:relative;
+}
+.cs-icon:hover{transform:scale(1.6) translateY(-4px);filter:drop-shadow(0 6px 12px rgba(0,0,0,.15));z-index:10;}
+.cs-right{
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  min-width:160px;border-left:1px solid rgba(0,0,0,.06);padding-left:24px;
+}
+.cs-title{font-size:.85rem;font-weight:600;color:var(--text-2);letter-spacing:.02em;text-align:center;}
+.cs-dl-btn{
+  font-size:.8rem;padding:8px 18px;border-radius:12px;height:auto;
+  background:var(--text);color:#fff;
+  display:inline-flex;align-items:center;gap:6px;font-weight:600;
+  box-shadow:0 4px 12px rgba(0,0,0,.15);
+  transition:all .25s ease;
+}
+.cs-dl-btn::before { display: none !important; }
+.cs-dl-btn:hover{
+  filter:brightness(1.15);
+  color:#fff;transform:translateY(-1px);
+  box-shadow:0 6px 16px rgba(0,0,0,.25);
+}
+@media(max-width:860px){
+  .cursor-showcase{flex-direction:column;padding:20px;border-radius:20px;}
+  .cs-preview{border-right:none;border-bottom:1px solid rgba(0,0,0,.06);padding-right:0;padding-bottom:16px;width:100%;height:80px}
+  .cs-right{border-left:none;border-top:1px solid rgba(0,0,0,.06);padding-left:0;padding-top:16px;width:100%;align-items:center}
+  .cs-icons{justify-content:center;}
+}
+
+.hc{position:relative;z-index:5;will-change:transform;width:100%;display:flex;flex-direction:column;align-items:center}
 .hc>*{opacity:0;transform:translateY(18px)}
 body.loaded .hc>*{animation:fadeUp .6s cubic-bezier(.23,1,.32,1) forwards}
 body.loaded .hc>*:nth-child(1){animation-delay:0s}
@@ -638,6 +749,7 @@ body.loaded .hc>*:nth-child(3){animation-delay:.18s}
 body.loaded .hc>*:nth-child(4){animation-delay:.26s}
 body.loaded .hc>*:nth-child(5){animation-delay:.34s}
 body.loaded .hc>*:nth-child(6){animation-delay:.42s}
+body.loaded .hc>*:nth-child(7){animation-delay:.5s}
 
 .hero-icon-w{position:relative;display:inline-block;margin-bottom:32px}
 .hero-icon-w::before,.hero-icon-w::after{
@@ -1345,7 +1457,7 @@ body.loaded .hc>*:nth-child(6){animation-delay:.42s}
     <svg width="15" height="15" viewBox="0 0 1024 1024" fill="currentColor"><path d="M512 1024C229.222 1024 0 794.778 0 512S229.222 0 512 0s512 229.222 512 512-229.222 512-512 512zm259.149-568.883h-290.74a25.293 25.293 0 0 0-25.292 25.293l-.006 63.206c0 13.952 11.315 25.293 25.267 25.293h177.024c13.978 0 25.293 11.315 25.293 25.267v12.646a75.853 75.853 0 0 1-75.853 75.853h-240.23a25.293 25.293 0 0 1-25.267-25.293V417.203a75.853 75.853 0 0 1 75.827-75.853h353.946a25.293 25.293 0 0 0 25.267-25.292l.077-63.207a25.293 25.293 0 0 0-25.268-25.293H417.152a189.62 189.62 0 0 0-189.62 189.645V771.15c0 13.977 11.316 25.293 25.294 25.293h372.94a170.65 170.65 0 0 0 170.65-170.65V480.384a25.293 25.293 0 0 0-25.293-25.267z"/></svg>
     Gitee
   </a>
-  <a class="nav-dl mag-btn" href="/download">免费下载</a>
+  <a class="nav-dl mag-btn" href="#cursorShowcase">免费下载</a>
 </nav>
 
 <!-- ═══ Hero ═══ -->
@@ -1359,7 +1471,7 @@ body.loaded .hc>*:nth-child(6){animation-delay:.42s}
     <p class="hero-tl">TA 从森林里来，因为想天天见到你。</p>
     <p class="hero-tl-en">A spirit from the forest, here to stay by your side.</p>
     <div class="hero-cta">
-      <a class="btn btn-gold mag-btn" href="/download">
+      <a class="btn btn-gold mag-btn" href="#cursorShowcase">
         <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a1 1 0 011 1v8.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 11.586V3a1 1 0 011-1z"/><path d="M5 16a1 1 0 100 2h10a1 1 0 100-2H5z"/></svg>
         下载
       </a>
@@ -1371,6 +1483,31 @@ body.loaded .hc>*:nth-child(6){animation-delay:.42s}
         <svg viewBox="0 0 1024 1024" fill="currentColor"><path d="M512 1024C229.222 1024 0 794.778 0 512S229.222 0 512 0s512 229.222 512 512-229.222 512-512 512zm259.149-568.883h-290.74a25.293 25.293 0 0 0-25.292 25.293l-.006 63.206c0 13.952 11.315 25.293 25.267 25.293h177.024c13.978 0 25.293 11.315 25.293 25.267v12.646a75.853 75.853 0 0 1-75.853 75.853h-240.23a25.293 25.293 0 0 1-25.267-25.293V417.203a75.853 75.853 0 0 1 75.827-75.853h353.946a25.293 25.293 0 0 0 25.267-25.292l.077-63.207a25.293 25.293 0 0 0-25.268-25.293H417.152a189.62 189.62 0 0 0-189.62 189.645V771.15c0 13.977 11.316 25.293 25.294 25.293h372.94a170.65 170.65 0 0 0 170.65-170.65V480.384a25.293 25.293 0 0 0-25.293-25.267z"/></svg>
         Gitee
       </a>
+    </div>
+
+    <!-- Cursor Stars (Skin Selectors) -->
+    <div class="cursor-stars" id="cursorStars">
+      <!-- Stars will be injected by JS -->
+    </div>
+
+    <!-- Cursor Showcase Bar -->
+    <div class="cursor-showcase" id="cursorShowcase">
+      <!-- 独立的左侧预览区 -->
+      <div class="cs-preview">
+        <img id="csPreviewImg" src="assets/cursors/transparent/01_normal.png" alt="Cursor Preview">
+      </div>
+      <div class="cs-left">
+        <div class="cs-icons" id="csIconList">
+          <!-- Icons injected by JS -->
+        </div>
+      </div>
+      <div class="cs-right">
+        <p class="cs-title" id="csTitle">📦 Windows桌面礼包上新：专属配套指针</p>
+        <a class="btn cs-dl-btn" href="#" target="_blank" rel="noopener" id="cursorLink">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          夸克网盘获取
+        </a>
+      </div>
     </div>
   </div>
   <div class="hero-scroll" aria-hidden="true">
@@ -1538,7 +1675,7 @@ body.loaded .hc>*:nth-child(6){animation-delay:.42s}
     <div class="dl-left">
       <h2 class="dl-t" data-text="领养 TA">领养 TA</h2>
       <p class="dl-t-en">Adopt XIAOTONG</p>
-      <a class="dl-btn mag-btn" href="/download">
+      <a class="dl-btn mag-btn" href="#cursorShowcase">
         <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a1 1 0 011 1v8.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 11.586V3a1 1 0 011-1z"/><path d="M5 16a1 1 0 100 2h10a1 1 0 100-2H5z"/></svg>
         下载最新版
       </a>
@@ -1583,9 +1720,46 @@ body.loaded .hc>*:nth-child(6){animation-delay:.42s}
   <p class="footer-copy">Apache 2.0 + 附加协议 · 蓝色小嗵 XIAOTONG</p>
 </footer>
 
-<script>
-(function(){
-  /* ── Helpers ───────────────────────────── */
+  <script>
+  (function(){
+    // 动态星轨陈列系统配置（全局预加载可用）
+    window.cursorSkins = [
+      {
+        id: "transparent",
+        title: "📦 Windows桌面礼包上新：透明小嗵专属配套指针",
+        downloadUrl: "https://pan.quark.cn/s/c39c349e3d42?pwd=3JvR",
+        starIcon: "assets/cursors/transparent/01_normal.png",
+        glow: "rgba(250, 212, 53, 0.7)",
+        path: "assets/cursors/transparent",
+        pos: { top: "35%", left: "10%" }
+      },
+      {
+        id: "pink",
+        title: "🌸 Windows桌面礼包上新：粉色小嗵专属配套指针",
+        downloadUrl: "https://pan.quark.cn/s/def165ba0dcb?pwd=EsJi",
+        starIcon: "assets/cursors/pink/03_link.png",
+        glow: "rgba(255, 182, 193, 0.8)",
+        path: "assets/cursors/pink",
+        pos: { top: "45%", right: "12%" }
+      },
+      {
+        id: "brown",
+        title: "🟤 Windows桌面礼包上新：棕色小嗵专属配套指针",
+        downloadUrl: "https://pan.quark.cn/s/b612fa64edca?pwd=Uxfz",
+        starIcon: "assets/cursors/brown/04_unavailable.png",
+        glow: "rgba(139, 69, 19, 0.8)",
+        path: "assets/cursors/brown",
+        pos: { top: "20%", right: "22%" }
+      }
+    ];
+
+    window.cursorFilenames = [
+      "01_normal.png", "02_text.png", "03_link.png", "04_unavailable.png", "05_alternate.png",
+      "06_help.png", "07_background.png", "08_precision.png", "09_handwriting.png", "10_busy.png",
+      "11_diagonal_nwse.png", "12_diagonal_nesw.png", "13_move.png", "14_vertical.png", "15_horizontal.png"
+    ];
+
+    /* ── Helpers ───────────────────────────── */
   var raf = requestAnimationFrame;
   function lerp(a,b,t){return a+(b-a)*t}
   var isMobile = window.innerWidth < 541;
@@ -1652,11 +1826,125 @@ body.loaded .hc>*:nth-child(6){animation-delay:.42s}
     var glowFollow = document.getElementById('glowFollow');
     var orb1 = document.querySelector('.orb-1');
     var orb2 = document.querySelector('.orb-2');
+    var fairy=document.getElementById('fairy');
+    if(!fairy)return;
+    var targetX=window.innerWidth/2;
+    var targetY=window.innerHeight/2;
+
+    // （皮肤配置已提取至 window.cursorSkins 和 window.cursorFilenames 作为全局变量，以便预加载脚本使用）
+
+    const starsContainer = document.getElementById('cursorStars');
+    const iconListContainer = document.getElementById('csIconList');
+    const csTitle = document.getElementById('csTitle');
+    const cursorLink = document.getElementById('cursorLink');
+    const previewImg = document.getElementById('csPreviewImg');
+
+    let currentSkinId = "transparent";
+
+    function initCursorSystem() {
+      if (!starsContainer) return;
+      // 1. 生成星星入口
+      window.cursorSkins.forEach(skin => {
+        const star = document.createElement('div');
+        star.className = `c-star ${skin.id === currentSkinId ? 'active' : ''}`;
+        star.style.setProperty('--star-glow', skin.glow);
+        if(skin.pos) {
+          if(skin.pos.top) star.style.top = skin.pos.top;
+          if(skin.pos.left) star.style.left = skin.pos.left;
+          if(skin.pos.right) star.style.right = skin.pos.right;
+          if(skin.pos.bottom) star.style.bottom = skin.pos.bottom;
+        }
+        star.innerHTML = `<img src="${skin.starIcon}" alt="${skin.id}">`;
+        
+        star.addEventListener('click', (e) => {
+          if (window.innerWidth <= 860) {
+            if (currentSkinId !== skin.id) {
+              e.preventDefault();
+              document.querySelectorAll('.c-star').forEach(s => s.classList.remove('active'));
+              star.classList.add('active');
+              renderShowcase(skin);
+              const showcase = document.getElementById('cursorShowcase');
+              if (showcase) {
+                showcase.scrollIntoView({ behavior: 'smooth' });
+              }
+              return;
+            }
+          }
+          if (skin.downloadUrl && skin.downloadUrl !== '#') {
+            window.open(skin.downloadUrl, '_blank');
+          }
+        });
+
+        star.addEventListener('mouseenter', () => {
+          if (window.innerWidth > 860) {
+            if (currentSkinId !== skin.id) {
+              document.querySelectorAll('.c-star').forEach(s => s.classList.remove('active'));
+              star.classList.add('active');
+              renderShowcase(skin);
+            }
+          }
+        });
+
+        starsContainer.appendChild(star);
+      });
+
+      // 2. 初始渲染默认皮肤
+      renderShowcase(window.cursorSkins[0]);
+    }
+
+    function renderShowcase(skin) {
+      currentSkinId = skin.id;
+      if(csTitle) csTitle.textContent = skin.title;
+      if(cursorLink) cursorLink.href = skin.downloadUrl;
+      if(previewImg) {
+        previewImg.src = `${skin.path}/01_normal.png`;
+        previewImg.style.transform = 'scale(0.8)';
+        setTimeout(() => previewImg.style.transform = 'scale(1)', 80);
+      }
+
+      if(iconListContainer) {
+        if (iconListContainer.children.length === 0) {
+          // 首次初始化：创建 DOM 节点并绑定事件
+          window.cursorFilenames.forEach(file => {
+            const img = document.createElement('img');
+            img.src = `${skin.path}/${file}`;
+            img.className = 'cs-icon';
+            
+            img.addEventListener('mouseenter', () => {
+              if(previewImg) {
+                previewImg.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                  previewImg.src = img.src;
+                  previewImg.style.transform = 'scale(1.1)';
+                }, 80);
+              }
+            });
+            img.addEventListener('mouseleave', () => {
+              if(previewImg) previewImg.style.transform = 'scale(1)';
+            });
+            
+            iconListContainer.appendChild(img);
+          });
+        } else {
+          // 后续切换：极速更新图片并添加透明度动画消除错位
+          const imgs = iconListContainer.querySelectorAll('.cs-icon');
+          imgs.forEach((img, index) => {
+            img.style.opacity = '0';
+            const newSrc = `${skin.path}/${window.cursorFilenames[index]}`;
+            img.onload = () => img.style.opacity = '1';
+            img.src = newSrc;
+          });
+        }
+      }
+    }
+
+    initCursorSystem();
+
     var ox=0, oy=0, oTargetX=0, oTargetY=0;
     var gx=0, gy=0;
     var orbT = 0;
 
-    document.addEventListener('mousemove', function(e){
+    window.addEventListener('mousemove',function(e){
       oTargetX = e.clientX - window.innerWidth/2;
       oTargetY = e.clientY - window.innerHeight/2;
     });
@@ -1947,6 +2235,13 @@ body.loaded .hc>*:nth-child(6){animation-delay:.42s}
     document.querySelectorAll('img[loading="lazy"]').forEach(function(img){
       lazySrcs.push(img.getAttribute('src'));
     });
+    // 强制把所有皮肤指针图片塞进预加载队列，确保进主页前必定缓冲完毕
+    if(window.cursorSkins && window.cursorFilenames) {
+      window.cursorSkins.forEach(skin => {
+        window.cursorFilenames.forEach(file => lazySrcs.push(`${skin.path}/${file}`));
+      });
+    }
+    
     var remaining = lazySrcs.length;
     if(remaining === 0){ preloadDone = true; }
     else {
